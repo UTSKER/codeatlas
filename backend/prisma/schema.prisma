@@ -1,0 +1,301 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RepositoryStatus {
+  PENDING
+  CLONING
+  PARSING
+  GRAPH_BUILDING
+  EMBEDDING
+  READY
+  FAILED
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id        String  @id @default(cuid())
+  githubId  String  @unique
+  username  String
+  email     String  @unique
+  avatarUrl String?
+
+  githubAccount GitHubAccount?
+  repositories  Repository[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model GitHubAccount {
+  id String @id @default(cuid())
+
+  accessToken  String
+  refreshToken String?
+  tokenType    String?
+  scope        String?
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Repository {
+  id String @id @default(cuid())
+
+  githubRepoId Int @unique
+
+  name        String
+  fullName    String
+  description String?
+
+  private Boolean
+
+  defaultBranch String
+
+  language String?
+
+  cloneUrl String
+  htmlUrl  String
+
+  owner String
+
+  status RepositoryStatus @default(PENDING)
+
+  localPath String?
+
+  lastSyncedAt      DateTime?
+  lastIndexedAt     DateTime?
+  lastIndexedCommit String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  jobs IndexJob[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  files     File[]
+}
+
+model IndexJob {
+  id String @id @default(cuid())
+
+  repositoryId String
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  status JobStatus @default(PENDING)
+
+  progress Int @default(0)
+
+  error String?
+
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model File {
+  id String @id @default(cuid())
+
+  repositoryId String
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  path String
+  name String
+
+  extension String?
+  language  String?
+
+  size Int
+
+  sha String?
+
+  isDirectory Boolean
+
+  parentPath String?
+
+  symbols Symbol[]
+
+  imports Import[]
+
+  functionCalls FunctionCall[]
+
+  resolvedImports Import[] @relation("ResolvedImport")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  exports   Export[]
+
+  @@unique([repositoryId, path])
+  @@index([repositoryId])
+}
+
+enum SymbolKind {
+  FUNCTION
+  METHOD
+  CLASS
+  VARIABLE
+  CONSTANT
+  INTERFACE
+  TYPE
+  ENUM
+}
+
+model Symbol {
+  id String @id @default(cuid())
+
+  fileId String
+  file   File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  name String
+
+  kind SymbolKind
+
+  line   Int
+  column Int
+
+  exported Boolean @default(false)
+
+  signature String?
+
+  parentSymbolId String?
+  parentSymbol   Symbol?  @relation("SymbolHierarchy", fields: [parentSymbolId], references: [id])
+  children       Symbol[] @relation("SymbolHierarchy")
+
+  exports Export[]
+
+  // NEW
+  outgoingCalls FunctionCall[] @relation("OutgoingCalls")
+  incomingCalls FunctionCall[] @relation("IncomingCalls")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fileId])
+  @@index([name])
+  @@index([kind])
+}
+
+enum ImportType {
+  INTERNAL
+  EXTERNAL
+}
+
+model Import {
+  id String @id @default(cuid())
+
+  fileId String
+  file   File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  source String
+
+  type ImportType
+
+  resolved Boolean @default(false)
+
+  resolvedFileId String?
+  resolvedFile   File?   @relation("ResolvedImport", fields: [resolvedFileId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fileId])
+  @@index([source])
+  @@index([resolvedFileId])
+}
+
+model FunctionCall {
+  id String @id @default(cuid())
+
+  fileId String
+  file   File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  callerName String
+  calleeName String
+
+  line   Int
+  column Int
+
+  resolved Boolean @default(false)
+
+  callerSymbolId String?
+  callerSymbol   Symbol? @relation("OutgoingCalls", fields: [callerSymbolId], references: [id])
+
+  calleeSymbolId String?
+  calleeSymbol   Symbol? @relation("IncomingCalls", fields: [calleeSymbolId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([fileId])
+  @@index([callerName])
+  @@index([calleeName])
+  @@index([callerSymbolId])
+  @@index([calleeSymbolId])
+}
+
+model Export {
+  id String @id @default(cuid())
+
+  fileId String
+  file   File   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  name String
+
+  kind SymbolKind
+
+  isDefault Boolean @default(false)
+
+  symbolId String?
+  symbol   Symbol? @relation(fields: [symbolId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fileId])
+  @@index([name])
+  @@index([symbolId])
+}
+
+enum EdgeType {
+  DEFINES
+  IMPORTS
+  EXPORTS
+  CALLS
+}
+
+model GraphEdge {
+  id String @id @default(cuid())
+
+  repositoryId String
+  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+
+  fromType String
+  fromId String
+
+  toType String
+  toId String
+
+  edgeType EdgeType
+
+  createdAt DateTime @default(now())
+
+  @@index([repositoryId])
+  @@index([fromId])
+  @@index([toId])
+}

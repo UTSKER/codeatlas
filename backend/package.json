@@ -1,0 +1,35 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "axios": "^1.18.1",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "fs-extra": "^11.3.6",
+    "jsonwebtoken": "^9.0.3",
+    "nodemon": "^3.1.14",
+    "passport": "^0.7.0",
+    "passport-github2": "^0.1.12",
+    "prisma": "^6.19.3",
+    "simple-git": "^3.36.0",
+    "tree-sitter-javascript": "^0.25.0",
+    "web-tree-sitter": "^0.26.10"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.26.10"
+  }
+}
