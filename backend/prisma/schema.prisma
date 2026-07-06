@@ -167,8 +167,11 @@ model Symbol {
 
   kind SymbolKind
 
-  line   Int
-  column Int
+  startLine   Int
+  startColumn Int
+
+  endLine   Int
+  endColumn Int
 
   exported Boolean @default(false)
 
@@ -277,25 +280,4 @@ enum EdgeType {
   IMPORTS
   EXPORTS
   CALLS
-}
-
-model GraphEdge {
-  id String @id @default(cuid())
-
-  repositoryId String
-  repository Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
-
-  fromType String
-  fromId String
-
-  toType String
-  toId String
-
-  edgeType EdgeType
-
-  createdAt DateTime @default(now())
-
-  @@index([repositoryId])
-  @@index([fromId])
-  @@index([toId])
 }

@@ -75,6 +75,7 @@ export const resolveImports = async (repositoryId) => {
                 id: imp.id,
             },
             data: {
+                resolved: true,
                 resolvedFileId: target.id,
             },
         });
