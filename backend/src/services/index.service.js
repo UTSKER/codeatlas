@@ -171,6 +171,18 @@ export const indexRepositoryService = async (repositoryId) => {
             id: repository.id,
         },
         data: {
+            status: "EMBEDDING",
+        },
+    });
+
+    // NEW
+    await embeddingIndexerService(repository.id);
+
+    await prisma.repository.update({
+        where: {
+            id: repository.id,
+        },
+        data: {
             status: "READY",
             lastIndexedAt: new Date(),
         },
