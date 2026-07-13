@@ -4,6 +4,9 @@ import embeddingService from "../services/embeddingService.js";
 import sourceCodeService from "../services/sourceCode.service.js";
 import embeddingTextBuilder from "../services/embeddingTextBuilder.service.js";
 
+import embeddingDocumentBuilder from "../services/embeddingDocument.builder.js";
+import pgVectorStore from "../../../ai/vector/pgVectorStore.js";
+
 class EmbeddingIndexerService {
 
     BATCH_SIZE = 8;
@@ -43,7 +46,6 @@ class EmbeddingIndexerService {
 
         console.log(`Found ${symbols.length} symbols.`);
 
-        const allEmbeddings = [];
         let processed = 0;
 
         for (
@@ -87,17 +89,29 @@ class EmbeddingIndexerService {
                     texts
                 );
 
+            const documents = [];
+
             for (let i = 0; i < batch.length; i++) {
 
-                allEmbeddings.push({
+                documents.push(
 
-                    symbol: batch[i],
+                    embeddingDocumentBuilder.build({
 
-                    embedding: vectors[i],
+                        repository,
 
-                });
+                        symbol: batch[i],
+
+                        content: texts[i],
+
+                        embedding: vectors[i],
+
+                    })
+
+                );
 
             }
+
+            await pgVectorStore.upsertBatch(documents);
 
             processed += batch.length;
 
@@ -111,7 +125,10 @@ class EmbeddingIndexerService {
             `Finished embedding ${processed} symbols.`
         );
 
-        return allEmbeddings;
+        return {
+            repositoryId,
+            indexed: processed,
+        };
 
     }
 

@@ -25,8 +25,10 @@ import moduleGraphTool from "./moduleGraph.tool.js";
 import findReferencesTool from "./findReferences.tool.js";
 import findCallersTool from "./findCallers.tool.js";
 import findCalleesTool from "./findCallees.tool.js";
+import semanticSearchTool from "./semanticSearch.tool.js";
 
 const tools = [
+    semanticSearchTool,
     searchSymbolsTool,
     searchFilesTool,
     searchClassesTool,
